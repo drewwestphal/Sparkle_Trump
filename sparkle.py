@@ -26,8 +26,8 @@ def load_emojis(filename):
     return emojis
 
 
-sparkles = load_emojis('./sparkles.txt')
-nightcaps = load_emojis('./nightcaps.txt')
+sparkles = load_emojis(join(dirname(__file__), 'sparkles.txt'))
+nightcaps = load_emojis(join(dirname(__file__), 'nightcaps.txt'))
 
 def random_sparkles(n):
     return ''.join([random.choice(sparkles) for number in range(0, n)])
