@@ -10,7 +10,7 @@ dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
 
-MIN_EMOJIS = 25
+MIN_EMOJIS = 15
 TWEET_LEN = 140
 EMOJI_REGEX = r'[^\x00-\x7F]'
 LINK_REGEX = r'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))'
@@ -100,12 +100,12 @@ def communal_fmt_choice(text):
     return dmac_space_sparkles(text, 3, True, True, 2)
 
 
-def comparable_form(text, debug_pfx=False):
+def comparable_form(text, debug_pfx=False, debug=False):
     replace_emoji = re.sub(EMOJI_REGEX, " ", text.lower())
     replace_links = re.sub(LINK_REGEX, "", replace_emoji)
     replace_nonws = re.sub(r"\W", "", replace_links)
 
-    if debug_pfx:
+    if debug_pfx and debug:
         print('['+debug_pfx+'a]'+text)
         print('['+debug_pfx+'0]'+replace_emoji)
         print('[' + debug_pfx + '1]' + replace_links)
