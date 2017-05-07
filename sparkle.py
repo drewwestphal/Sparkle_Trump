@@ -4,6 +4,7 @@ from os.path import join, dirname
 from dotenv import load_dotenv
 import random
 import re
+import html
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -11,8 +12,8 @@ load_dotenv(dotenv_path)
 
 MIN_EMOJIS = 25
 TWEET_LEN = 140
-EMOJI_REGEX = r"/[\u263a-\U0001f645]/"
-LINK_REGEX = r"/(\S+\.(com|net|org|edu|gov|co)(\/\S+)?)"
+EMOJI_REGEX = r'[^\x00-\x7F]'
+LINK_REGEX = r'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))'
 
 
 
@@ -99,8 +100,17 @@ def communal_fmt_choice(text):
     return dmac_space_sparkles(text, 3, True, True, 2)
 
 
-def comparable_form(text):
-    return re.sub(r"\W", "", re.sub(LINK_REGEX, "", re.sub(EMOJI_REGEX, "", text)))
+def comparable_form(text, debug_pfx=False):
+    replace_emoji = re.sub(EMOJI_REGEX, " ", text.lower())
+    replace_links = re.sub(LINK_REGEX, "", replace_emoji)
+    replace_nonws = re.sub(r"\W", "", replace_links)
+
+    if debug_pfx:
+        print('['+debug_pfx+'a]'+text)
+        print('['+debug_pfx+'0]'+replace_emoji)
+        print('[' + debug_pfx + '1]' + replace_links)
+        print('[' + debug_pfx + '2]' + replace_nonws)
+    return replace_nonws
 
 read_api = twitter.Api(consumer_key=os.environ['READ_CONSUMER_KEY'],
                       consumer_secret=os.environ['READ_CONSUMER_SECRET'],
@@ -114,15 +124,16 @@ write_api = twitter.Api(consumer_key=os.environ['WRITE_CONSUMER_KEY'],
 
 
 # texts that have headroom for at least MIN_EMOJIS
-texts_to_sparkle_up = [tweet.text for tweet
+texts_to_sparkle_up = [html.unescape(tweet.text) for tweet
                        in read_api.GetUserTimeline(screen_name="realDonaldTrump", count=200)
                        if len(tweet.text) <= (TWEET_LEN - MIN_EMOJIS)]
 
-extant_tweet_corpus_texts = [tweet.text for tweet
-                       in write_api.GetUserTimeline(count=200)]
+extant_tweet_corpus_texts = [html.unescape(tweet.text) for tweet
+                             in write_api.GetUserTimeline(count=200)]
 
+comparable_corpus = [comparable_form(ext,"corp") for ext in extant_tweet_corpus_texts]
 untweeted_sparkleable_texts = [text for text in texts_to_sparkle_up if
-                               comparable_form(text) not in [comparable_form(ext) for ext in extant_tweet_corpus_texts]]
+                               comparable_form(text, "orig") not in comparable_corpus]
 
 if len(untweeted_sparkleable_texts):
     target = untweeted_sparkleable_texts[-1]
