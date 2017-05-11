@@ -20,7 +20,7 @@ LINK_REGEX = r'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[
 
 def load_emojis(filename):
     emojis = ''
-    for line in open(filename):
+    for line in open(filename, encoding="utf-8"):
         line = ''.join(line.split())
         if not line.startswith('#'):
             emojis += line
