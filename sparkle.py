@@ -5,92 +5,57 @@ from dotenv import load_dotenv
 import random
 import re
 import html
+from sparkle_func import *
+
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
 
-MIN_EMOJIS = 15
-TWEET_LEN = 140
 EMOJI_REGEX = r'[^\x00-\x7F]'
 LINK_REGEX = r'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))'
 
 
 
 
-def load_emojis(filename):
-    emojis = ''
-    for line in open(filename, encoding="utf-8"):
-        line = ''.join(line.split())
-        if not line.startswith('#'):
-            emojis += line
-    return emojis
-
-
-sparkles = load_emojis(join(dirname(__file__), 'sparkles.txt'))
-nightcaps = load_emojis(join(dirname(__file__), 'nightcaps.txt'))
-
-def random_sparkles(n):
-    return ''.join([random.choice(sparkles) for number in range(0, n)])
-
-def random_nightcap(n):
-    return ''.join([random.choice(nightcaps) for number in range(0, n)])
-
-
 def dmac_space_sparkles(text, max_sparkles_in_a_space=99, pad_ending=True, include_nightcap=False, nightcap_chars=2):
-    words = text.split()
-    unfree_chars = 0
-    for word in words:
-        unfree_chars += len(word)
+    nightcap = ''
+    if include_nightcap: 
+        nightcap = "\n\n"
+        nightcap = interpolate_sparkles(SparkleTrump.NIGHTCAPS, nightcap, len(nightcap), 2, SparkleTrump.TWEET_LEN-len(text)-len(nightcap))
 
-    sparkly_nightcap = "\n\n"+random_nightcap(nightcap_chars)
-    if include_nightcap:
-        unfree_chars += len(sparkly_nightcap)
+    emoji_in_each_space = min((SparkleTrump.TWEET_LEN-sum([len(word) for word in text.split()])-len(nightcap))//len(text.split()), max_sparkles_in_a_space)
 
-    free_chars = TWEET_LEN-unfree_chars;
-    spaces_for_emojis = len(words)+1
-    emoji_in_each_space = min(free_chars//spaces_for_emojis, max_sparkles_in_a_space)
-
-    sparkled_tweet = random_sparkles(emoji_in_each_space)
-    for word in words:
-        sparkled_tweet += word + random_sparkles(emoji_in_each_space)
+    text = sparkles_for_spaces(SparkleTrump.SPARKLES, text, emoji_in_each_space, SparkleTrump.TWEET_LEN - len(nightcap))+nightcap
 
     if pad_ending:
-        sparkled_tweet += random_sparkles(TWEET_LEN-len(sparkled_tweet)-(len(sparkly_nightcap) if include_nightcap else  0))
+        text = interpolate_sparkles(SparkleTrump.SPARKLES, text, len(text)-len(nightcap), SparkleTrump.TWEET_LEN, SparkleTrump.TWEET_LEN-len(text))
 
-    if include_nightcap and len(sparkled_tweet) <=   TWEET_LEN-len(sparkly_nightcap):
-        return sparkled_tweet+sparkly_nightcap
-
-    return sparkled_tweet
+    return text
 
 def aki_scattershot(text):
+    text = sparkles_for_spaces(SparkleTrump.SPARKLES, text, 1, SparkleTrump.TWEET_LEN)
+
     sparkle_idx_probability = .66
-    num_sparkles = min(TWEET_LEN-len(text), sparkle_idx_probability*len(text))
+    num_sparkles = int(min(SparkleTrump.TWEET_LEN-len(text), sparkle_idx_probability*len(text)))
     sparkle_idx_probability = num_sparkles/len(text)
 
-    sparkled_tweet_phase_0 = ''
-    for word in text.split():
-        sparkled_tweet_phase_0 += word
-        sparkled_tweet_phase_0 += random_sparkles(1)
+    for index in reversed(range(0, len(text))):
+        if random.uniform(0, 1) <= sparkle_idx_probability:
+            print(index)
+            text = interpolate_single_sparkle(SparkleTrump.SPARKLES, text, index, SparkleTrump.TWEET_LEN - len(text))
 
-    sparkled_tweet_phase_1 = ''
-    sparkles_used = 0
-    for i in range(0, len(sparkled_tweet_phase_0)):
-        if len(sparkled_tweet_phase_1) < TWEET_LEN:
-            if sparkles_used < num_sparkles and random.uniform(0, 1) <= sparkle_idx_probability:
-                sparkled_tweet_phase_1 += random_sparkles(1)
-
-            sparkled_tweet_phase_1 += sparkled_tweet_phase_0[i]
-
-
-    return sparkled_tweet_phase_1
+    return text
 
 #print(random_sparkles(2))
 #print(random_nightcap(2))
 
+#test_text = "We finally agree on something Rosie."
+
 #print("\n\n"+dmac_space_sparkles(test_text,3)+"\n\n")
 #print("\n\n"+dmac_space_sparkles(test_text,3,True,True,2)+"\n\n")
 #print("\n\n"+aki_scattershot(test_text)+"\n\n")
+#print(communal_fmt_choice(test_text))
 
 #print(sparkles)
 #print(len(sparkles))
@@ -126,7 +91,7 @@ write_api = twitter.Api(consumer_key=os.environ['WRITE_CONSUMER_KEY'],
 # texts that have headroom for at least MIN_EMOJIS
 texts_to_sparkle_up = [html.unescape(tweet.text) for tweet
                        in read_api.GetUserTimeline(screen_name="realDonaldTrump", count=200)
-                       if len(tweet.text) <= (TWEET_LEN - MIN_EMOJIS)]
+                       if len(tweet.text) <= (SparkleTrump.TWEET_LEN - SparkleTrump.MIN_SPACE)]
 
 extant_tweet_corpus_texts = [html.unescape(tweet.text) for tweet
                              in write_api.GetUserTimeline(count=200)]
